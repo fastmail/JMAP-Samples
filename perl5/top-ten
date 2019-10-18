@@ -1,0 +1,69 @@
+#!perl
+use v5.24.0;
+use warnings;
+
+use JSON::MaybeXS;
+use LWP::UserAgent;
+use MIME::Base64;
+
+binmode *STDOUT, ':encoding(UTF-8)';
+
+my $api_uri    = 'https://betajmap.fastmail.com/api';
+my $auth_uri   = 'https://betajmap.fastmail.com/authenticate';
+my $username   = $ENV{JMAP_USERNAME} // die "no JMAP_USERNAME set!\n";
+my $password   = $ENV{JMAP_PASSWORD} // die "no JMAP_PASSWORD set!\n";
+
+my $auth_token = encode_base64("$username:$password", "");
+
+my $www = LWP::UserAgent->new;
+my $JSON = JSON::MaybeXS->new->utf8;
+
+sub get_account_id {
+  my $res = $www->get(
+    $auth_uri,
+    Authorization  => "basic $auth_token",
+  );
+
+  my $session = $JSON->decode($res->decoded_content);
+
+  my ($account_id) = grep {; $session->{accounts}{$_}{name} eq $username }
+                     keys %{ $session->{accounts} };
+
+  return $account_id;
+}
+
+my $account_id = get_account_id();
+
+my $res = $www->post(
+  $api_uri,
+  'Content-Type' => 'application/json',
+  Authorization  => "basic $auth_token",
+  Content => encode_json({
+    using => [ "urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail" ],
+    methodCalls => [
+      [ 'Email/query',
+        {
+          accountId => $account_id,
+          sort  =>  [ { property => "receivedAt", isAscending => \0 } ],
+          limit => 10,
+        },
+        'a',
+      ],
+      [ 'Email/get',
+        { accountId => $account_id,
+          properties => [ 'id', 'subject', 'receivedAt' ],
+          '#ids' => { resultOf => 'a', name => 'Email/query', path => '/ids/*' },
+        },
+        'b',
+      ]
+    ],
+  }),
+);
+
+die $res->as_string unless $res->is_success;
+
+for my $email (
+  $JSON->decode($res->decoded_content)->{methodResponses}[1][1]{list}->@*
+) {
+  printf "%20s - %s\n", $email->{receivedAt}, $email->{subject};
+}
