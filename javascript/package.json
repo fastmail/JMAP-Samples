@@ -1,0 +1,13 @@
+{
+  "name": "jmap-samples",
+  "version": "1.0.0",
+  "description": "JMAP samples in javascript",
+  "main": "hello-world.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "dependencies": {
+    "node-fetch": "^2.6.0"
+  }
+}
