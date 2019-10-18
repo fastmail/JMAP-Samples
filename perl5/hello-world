@@ -1,0 +1,115 @@
+#!perl
+use v5.24.0;
+use warnings;
+
+use JSON::MaybeXS;
+use LWP::UserAgent;
+use MIME::Base64;
+
+binmode *STDOUT, ':encoding(UTF-8)';
+
+my $api_uri    = 'https://betajmap.fastmail.com/api';
+my $auth_uri   = 'https://betajmap.fastmail.com/authenticate';
+my $username   = $ENV{JMAP_USERNAME} // die "no JMAP_USERNAME set!\n";
+my $password   = $ENV{JMAP_PASSWORD} // die "no JMAP_PASSWORD set!\n";
+
+my $auth_token = encode_base64("$username:$password", "");
+
+my $www = LWP::UserAgent->new;
+my $JSON = JSON::MaybeXS->new->utf8;
+
+sub get_account_id {
+  my $res = $www->get(
+    $auth_uri,
+    Authorization  => "basic $auth_token",
+  );
+
+  my $session = $JSON->decode($res->decoded_content);
+
+  my ($account_id) = grep {; $session->{accounts}{$_}{name} eq $username }
+                     keys %{ $session->{accounts} };
+
+  return $account_id;
+}
+
+my $account_id = get_account_id();
+
+my $mbox_query = $www->post(
+  $api_uri,
+  'Content-Type' => 'application/json',
+  Authorization  => "basic $auth_token",
+  Content => encode_json({
+    using => [
+      "urn:ietf:params:jmap:core",
+      "urn:ietf:params:jmap:mail",
+    ],
+    methodCalls => [
+      [
+        'Mailbox/query',
+        # I should use the role filter instead, but I believe there is a bug
+        # in that filter at the time of writing. -- rjbs, 2019-10-18
+        { accountId => $account_id, filter => { name => 'Drafts' } },
+        'a'
+      ],
+    ],
+  }),
+);
+
+die "failed to Mailbox/query" unless $mbox_query->is_success;
+my $draft_mailbox_id = $JSON->decode($mbox_query->decoded_content)
+                            ->{methodResponses}[0][1]{ids}[0];
+
+my $body = <<END;
+Hi!
+
+This email may not look like much, but I sent it with JMAP, a new protocol
+designed to make it easier to manage email, contacts, calendars, and more of
+your digital life in general.
+
+Pretty cool, right?
+
+-- 
+This email sent from my next-generation email system at Fastmail.
+END
+
+my $draft = {
+  from      => [ { email => $username } ],
+  to        => [ { email => $username } ],
+  subject   => "Hello, world!",
+  keywords  => { '$draft' => JSON::MaybeXS::true  },
+  mailboxIds => { $draft_mailbox_id => JSON::MaybeXS::true },
+  bodyValues  => { body => { value => $body, charset => 'utf-8' }  },
+  textBody    => [ { partId => 'body', type => 'text/plain' } ],
+};
+
+my $res = $www->post(
+  $api_uri,
+  'Content-Type' => 'application/json',
+  Authorization  => "basic $auth_token",
+  Content => encode_json({
+    using => [
+      "urn:ietf:params:jmap:core",
+      "urn:ietf:params:jmap:mail",
+      "urn:ietf:params:jmap:submission",
+    ],
+    methodCalls => [
+      [ 'Email/set', {
+          accountId => $account_id,
+          create => { draft => $draft }
+        },
+        'a',
+      ],
+      [ 'EmailSubmission/set', {
+          accountId => $account_id,
+          onSuccessDestroyEmail => [ '#sendIt' ],
+          create => { sendIt => { emailId => '#draft' } }
+        },
+        'b',
+      ],
+    ],
+  }),
+);
+
+print JSON::MaybeXS->new->canonical->utf8->encode(
+  $JSON->decode($res->decoded_content)
+);
