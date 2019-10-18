@@ -4,11 +4,13 @@ import json
 import os
 from tiny_jmap_library import TinyJMAPClient
 
+# Set up our client from the environment and set our account ID
 client = TinyJMAPClient(
     username=os.environ.get("JMAP_USERNAME"), password=os.environ.get("JMAP_PASSWORD")
 )
 account_id = client.get_account_id()
 
+# Here, we're going to find our drafts mailbox, by calling Mailbox/query
 query_res = client.make_jmap_call(
     {
         "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
@@ -22,9 +24,11 @@ query_res = client.make_jmap_call(
     }
 )
 
+# Pull out the id from the list response, and make sure we got it
 draft_mailbox_id = query_res["methodResponses"][0][1]["ids"][0]
 assert len(draft_mailbox_id) > 0
 
+# Great! Now we're going to set up the data for the email we're going to send.
 body = """
 Hi!
 
@@ -48,6 +52,10 @@ draft = {
     "textBody": [{"partId": "body", "type": "text/plain"}],
 }
 
+# Here, we make two calls in a single request. The first is an Email/set, to
+# set our draft in our drafts folder, and the second is an
+# EmailSubmission/set, to actually send the mail to ourselves. This requires
+# an additional capability for submission.
 create_res = client.make_jmap_call(
     {
         "using": [
