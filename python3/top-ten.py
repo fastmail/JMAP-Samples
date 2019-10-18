@@ -2,73 +2,38 @@
 
 import json
 import os
-import sys
-import requests
+from tiny_jmap_library import TinyJMAPClient
 
-api_uri = "https://betajmap.fastmail.com/api"
-auth_uri = "https://betajmap.fastmail.com/authenticate"
-username = os.environ.get("JMAP_USERNAME")
-password = os.environ.get("JMAP_PASSWORD")
-
-if not username:
-    print("no JMAP_USERNAME set!")
-    sys.exit(1)
-
-if not password:
-    print("no JMAP_PASSWORD set!")
-    sys.exit(1)
-
-
-def get_account_id():
-    r = requests.get(auth_uri, auth=(username, password))
-    session = r.json()
-
-    account_id = None
-    for key, data in session["accounts"].items():
-        if data["name"] == username:
-            account_id = key
-            break
-
-    return account_id
-
-
-account_id = get_account_id()
-
-get_res = requests.post(
-    api_uri,
-    auth=(username, password),
-    headers={"Content-Type": "application/json"},
-    data=json.dumps(
-        {
-            "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
-            "methodCalls": [
-                [
-                    "Email/query",
-                    {
-                        "accountId": account_id,
-                        "sort": [{"property": "receivedAt", "isAscending": False}],
-                        "limit": 10,
-                    },
-                    "a",
-                ],
-                [
-                    "Email/get",
-                    {
-                        "accountId": account_id,
-                        "properties": ["id", "subject", "receivedAt"],
-                        "#ids": {
-                            "resultOf": "a",
-                            "name": "Email/query",
-                            "path": "/ids/*",
-                        },
-                    },
-                    "b",
-                ],
-            ],
-        }
-    ),
+client = TinyJMAPClient(
+    username=os.environ.get("JMAP_USERNAME"), password=os.environ.get("JMAP_PASSWORD")
 )
-get_res.raise_for_status()
+account_id = client.get_account_id()
 
-for email in get_res.json()["methodResponses"][1][1]["list"]:
+get_res = client.make_jmap_call(
+    {
+        "using": ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
+        "methodCalls": [
+            [
+                "Email/query",
+                {
+                    "accountId": account_id,
+                    "sort": [{"property": "receivedAt", "isAscending": False}],
+                    "limit": 10,
+                },
+                "a",
+            ],
+            [
+                "Email/get",
+                {
+                    "accountId": account_id,
+                    "properties": ["id", "subject", "receivedAt"],
+                    "#ids": {"resultOf": "a", "name": "Email/query", "path": "/ids/*"},
+                },
+                "b",
+            ],
+        ],
+    }
+)
+
+for email in get_res["methodResponses"][1][1]["list"]:
     print("{} - {}".format(email["receivedAt"], email["subject"]))
