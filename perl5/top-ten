@@ -32,36 +32,59 @@ my $session = get_session();
 my $account_id = $session->{primaryAccounts}->{"urn:ietf:params:jmap:mail"};
 my $api_url = $session->{apiUrl};
 
-my $res = $www->post(
-  $api_url,
-  'Content-Type' => 'application/json',
-  Authorization  => "basic $auth_token",
-  Content => encode_json({
-    using => [ "urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail" ],
-    methodCalls => [
-      [ 'Email/query',
-        {
-          accountId => $account_id,
-          sort  =>  [ { property => "receivedAt", isAscending => \0 } ],
-          limit => 10,
-        },
-        'a',
-      ],
-      [ 'Email/get',
-        { accountId => $account_id,
-          properties => [ 'id', 'subject', 'receivedAt' ],
-          '#ids' => { resultOf => 'a', name => 'Email/query', path => '/ids/*' },
-        },
-        'b',
-      ]
-    ],
-  }),
+sub do_request {
+  my (@method_calls) = @_;
+
+  my $res = $www->post(
+    $api_url,
+    'Content-Type' => 'application/json',
+    Authorization  => "basic $auth_token",
+    Content => encode_json({
+      using => [ "urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail" ],
+      methodCalls => \@method_calls,
+    }),
+  );
+
+  die $res->as_string unless $res->is_success;
+
+  warn $res->decoded_content;
+  return $JSON->decode($res->decoded_content)->{methodResponses};
+}
+
+my $inbox_reply = do_request(
+  [
+    'Mailbox/query',
+    {
+      accountId => $account_id,
+      filter    => { role => 'inbox', hasAnyRole => \1 },
+    },
+    'a',
+  ]
 );
 
-die $res->as_string unless $res->is_success;
+my $inbox_id = $inbox_reply->[0][1]{ids}[0];
 
-for my $email (
-  $JSON->decode($res->decoded_content)->{methodResponses}[1][1]{list}->@*
-) {
+die "no inbox!?" unless defined $inbox_id;
+
+my $mail_reply = do_request(
+  [ 'Email/query',
+    {
+      accountId => $account_id,
+      filter  => { inMailbox => $inbox_id },
+      sort    =>  [ { property => "receivedAt", isAscending => \0 } ],
+      limit   => 10,
+    },
+    'a',
+  ],
+  [ 'Email/get',
+    { accountId => $account_id,
+      properties => [ 'id', 'subject', 'receivedAt' ],
+      '#ids' => { resultOf => 'a', name => 'Email/query', path => '/ids/*' },
+    },
+    'b',
+  ]
+);
+
+for my $email ($mail_reply->[1][1]{list}->@*) {
   printf "%20s - %s\n", $email->{receivedAt}, $email->{subject};
 }
