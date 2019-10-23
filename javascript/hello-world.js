@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const fetch = require("node-fetch");
 
 // bail if we don't have our ENV set:
@@ -10,27 +12,25 @@ if (!process.env.JMAP_USERNAME || !process.env.JMAP_PASSWORD) {
   process.exit(1);
 }
 
-const api_url = "https://betajmap.fastmail.com/api";
-const auth_uri = "https://betajmap.fastmail.com/authenticate";
+const hostname = process.env.JMAP_HOSTNAME || "betajmap.fastmail.com";
 const username = process.env.JMAP_USERNAME;
 const password = process.env.JMAP_PASSWORD;
 
+const auth_url = `https://${hostname}/.well-known/jmap`;
 const auth_token = Buffer.from(`${username}:${password}`).toString("base64");
 
-const getAccountId = async () => {
-  const response = await fetch(auth_uri, {
+const getSession = async () => {
+  const response = await fetch(auth_url, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
       Authorization: `basic ${auth_token}`
     }
   });
-  const data = await response.json();
-
-  return await data.primaryAccounts["urn:ietf:params:jmap:mail"];
+  return response.json();
 };
 
-const mailboxQuery = async account_id => {
+const mailboxQuery = async (api_url, account_id) => {
   const response = await fetch(api_url, {
     method: "POST",
     headers: {
@@ -53,7 +53,7 @@ const mailboxQuery = async account_id => {
   return await data["methodResponses"][0][1]["ids"][0];
 };
 
-const draftResponse = async (account_id, draft_id) => {
+const draftResponse = async (api_url, account_id, draft_id) => {
   const message_body =
     "Hi! \n\n" +
     "This email may not look like much, but I sent it with JMAP, a new protocol \n" +
@@ -108,8 +108,10 @@ const draftResponse = async (account_id, draft_id) => {
   console.log(JSON.stringify(data));
 };
 
-getAccountId().then(account_id => {
-  mailboxQuery(account_id).then(draft_id => {
-    draftResponse(account_id, draft_id);
+getSession().then(session => {
+  const api_url = session.apiUrl;
+  const account_id = session.primaryAccounts["urn:ietf:params:jmap:mail"];
+  mailboxQuery(api_url, account_id).then(draft_id => {
+    draftResponse(api_url, account_id, draft_id);
   });
 });

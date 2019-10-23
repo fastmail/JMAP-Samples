@@ -6,7 +6,9 @@ from tiny_jmap_library import TinyJMAPClient
 
 # Set up our client from the environment and set our account ID
 client = TinyJMAPClient(
-    username=os.environ.get("JMAP_USERNAME"), password=os.environ.get("JMAP_PASSWORD")
+    hostname=os.environ.get("JMAP_HOSTNAME", 'betajmap.fastmail.com'),
+    username=os.environ.get("JMAP_USERNAME"),
+    password=os.environ.get("JMAP_PASSWORD"),
 )
 account_id = client.get_account_id()
 

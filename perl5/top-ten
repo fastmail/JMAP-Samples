@@ -8,34 +8,32 @@ use MIME::Base64;
 
 binmode *STDOUT, ':encoding(UTF-8)';
 
-my $api_uri    = 'https://betajmap.fastmail.com/api';
-my $auth_uri   = 'https://betajmap.fastmail.com/authenticate';
+my $hostname   = $ENV{JMAP_HOSTNAME} // 'betajmap.fastmail.com';
 my $username   = $ENV{JMAP_USERNAME} // die "no JMAP_USERNAME set!\n";
 my $password   = $ENV{JMAP_PASSWORD} // die "no JMAP_PASSWORD set!\n";
+my $auth_url   = "https://$hostname/.well-known/jmap";
 
 my $auth_token = encode_base64("$username:$password", "");
 
 my $www = LWP::UserAgent->new;
 my $JSON = JSON::MaybeXS->new->utf8;
 
-sub get_account_id {
+sub get_session {
   my $res = $www->get(
-    $auth_uri,
+    $auth_url,
     Authorization  => "basic $auth_token",
   );
 
-  my $session = $JSON->decode($res->decoded_content);
-
-  my ($account_id) = grep {; $session->{accounts}{$_}{name} eq $username }
-                     keys %{ $session->{accounts} };
-
-  return $account_id;
+  return $JSON->decode($res->decoded_content);
 }
 
-my $account_id = get_account_id();
+my $session = get_session();
+
+my $account_id = $session->{primaryAccounts}->{"urn:ietf:params:jmap:mail"};
+my $api_url = $session->{apiUrl};
 
 my $res = $www->post(
-  $api_uri,
+  $api_url,
   'Content-Type' => 'application/json',
   Authorization  => "basic $auth_token",
   Content => encode_json({
