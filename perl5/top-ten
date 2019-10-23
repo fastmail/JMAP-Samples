@@ -29,14 +29,7 @@ sub get_session {
 
 my $session = get_session();
 
-sub get_account_id {
-  my ($account_id) = grep {; $session->{accounts}{$_}{name} eq $username }
-                     keys %{ $session->{accounts} };
-
-  return $account_id;
-}
-
-my $account_id = get_account_id();
+my $account_id = $session->{primaryAccounts}->{"urn:ietf:params:jmap:mail"};
 my $api_url = $session->{apiUrl};
 
 my $res = $www->post(

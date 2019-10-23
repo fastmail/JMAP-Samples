@@ -39,14 +39,9 @@ class TinyJMAPClient:
 
         session = self.get_session()
 
-        account_id = None
-        for key, data in session["accounts"].items():
-            if data["name"] == self.username:
-                account_id = key
-                break
-
+        account_id = session["primaryAccounts"]["urn:ietf:params:jmap:mail"]
         self.account_id = account_id
-        return self.account_id
+        return account_id
 
     def make_jmap_call(self, call):
         """Make a JMAP POST request to the API, returning the reponse as a
