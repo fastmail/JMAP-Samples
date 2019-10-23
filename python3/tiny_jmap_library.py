@@ -6,30 +6,38 @@ import requests
 class TinyJMAPClient:
     """The tiniest JMAP client you can imagine."""
 
-    api_uri = "https://betajmap.fastmail.com/api"
-    auth_uri = "https://betajmap.fastmail.com/authenticate"
-
-    def __init__(self, username, password):
-        """Initialize using a username and password"""
+    def __init__(self, hostname, username, password):
+        """Initialize using a hostname, username and password"""
+        assert len(hostname) > 0
         assert len(username) > 0
         assert len(password) > 0
 
+        self.hostname = hostname
         self.username = username
         self.password = password
+        self.session = None
+        self.api_url = None
         self.account_id = None
 
-    def get_session_resource(self):
+    def get_session(self):
         """Return the JMAP Session Resource as a Python dict"""
-        r = requests.get(self.auth_uri, auth=(self.username, self.password))
+        if self.session:
+            return self.session
+        r = requests.get(
+            "https://" + self.hostname + "/.well-known/jmap",
+            auth=(self.username, self.password),
+        )
         r.raise_for_status()
-        return r.json()
+        self.session = session = r.json()
+        self.api_url = session["apiUrl"]
+        return session
 
     def get_account_id(self):
         """Return the accountId for the account matching self.username"""
         if self.account_id:
             return self.account_id
 
-        session = self.get_session_resource()
+        session = self.get_session()
 
         account_id = None
         for key, data in session["accounts"].items():
@@ -44,7 +52,7 @@ class TinyJMAPClient:
         """Make a JMAP POST request to the API, returning the reponse as a
         Python data structure."""
         res = requests.post(
-            self.api_uri,
+            self.api_url,
             auth=(self.username, self.password),
             headers={"Content-Type": "application/json"},
             data=json.dumps(call),

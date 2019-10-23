@@ -10,27 +10,25 @@ if (!process.env.JMAP_USERNAME || !process.env.JMAP_PASSWORD) {
   process.exit(1);
 }
 
-const api_url = "https://betajmap.fastmail.com/api";
-const auth_uri = "https://betajmap.fastmail.com/authenticate";
+const hostname = process.env.JMAP_HOSTNAME || "betajmap.fastmail.com";
 const username = process.env.JMAP_USERNAME;
 const password = process.env.JMAP_PASSWORD;
 
+const auth_url = `https://${hostname}/.well-known/jmap`;
 const auth_token = Buffer.from(`${username}:${password}`).toString("base64");
 
-const getAccountId = async () => {
-  const response = await fetch(auth_uri, {
+const getSession = async () => {
+  const response = await fetch(auth_url, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
       Authorization: `basic ${auth_token}`
     }
   });
-  const data = await response.json();
-
-  return await data.primaryAccounts["urn:ietf:params:jmap:mail"];
+  return response.json();
 };
 
-const mailboxQuery = async account_id => {
+const mailboxQuery = async (api_url, account_id) => {
   const response = await fetch(api_url, {
     method: "POST",
     headers: {
@@ -71,8 +69,10 @@ const mailboxQuery = async account_id => {
   return await data;
 };
 
-getAccountId().then(account_id => {
-  mailboxQuery(account_id).then(emails => {
+getSession().then(session => {
+  const api_url = session.apiUrl;
+  const account_id = session.primaryAccounts["urn:ietf:params:jmap:mail"];
+  mailboxQuery(api_url, account_id).then(emails => {
     emails["methodResponses"][1][1]["list"].forEach(email => {
       console.log(`${email.receivedAt} — ${email.subject}`);
     });
