@@ -47,7 +47,6 @@ sub do_request {
 
   die $res->as_string unless $res->is_success;
 
-  warn $res->decoded_content;
   return $JSON->decode($res->decoded_content)->{methodResponses};
 }
 
