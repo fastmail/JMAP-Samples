@@ -55,19 +55,15 @@ local get_res = client:make_jmap_call(
       },
       {
         "Email/get",
-        (function ()
-          -- this is a stupid workaround to inline args because we can't use
-          -- "#ids" as a key in the literal table syntax
-          local args = {}
-          args.accountId = account_id
-          args.properties = {"id", "subject", "receivedAt"}
-          args["#ids"] = {
+        {
+          accountId = account_id,
+          properties = {"id", "subject", "receivedAt"},
+          ["#ids"] = {
             resultOf = "a",
             name = "Email/query",
             path = "/ids/*",
-          }
-          return args
-        end)(),
+          },
+        },
         "b",
       },
     },
