@@ -54,6 +54,31 @@ draft = {
     "textBody": [{"partId": "body", "type": "text/plain"}],
 }
 
+
+create_res = client.make_jmap_call(
+    {
+        "using": [
+            "urn:ietf:params:jmap:core",
+            "urn:ietf:params:jmap:mail",
+            "urn:ietf:params:jmap:submission",
+        ],
+        "methodCalls": [
+           [ "Identity/get", {
+               "accountId": account_id,
+           } , "pluckaduck"]
+        ]
+    }
+)
+
+senderIdentity = None
+
+for sndId in create_res["methodResponses"][0][1]['list']:
+    if sndId["email"] == client.username:
+        senderIdentity = sndId["id"]
+        break
+
+assert senderIdentity != None
+
 # Here, we make two calls in a single request. The first is an Email/set, to
 # set our draft in our drafts folder, and the second is an
 # EmailSubmission/set, to actually send the mail to ourselves. This requires
@@ -72,7 +97,22 @@ create_res = client.make_jmap_call(
                 {
                     "accountId": account_id,
                     "onSuccessDestroyEmail": ["#sendIt"],
-                    "create": {"sendIt": {"emailId": "#draft"}},
+                    "create": { "sendIt": {
+                        "emailId": "#draft",
+                        "identityId": senderIdentity,
+                        "envelope": {
+                            "mailFrom": {
+                                "email": client.username,
+                                "parameters": None
+                            },
+                            "rcptTo": [
+                                {
+                                    "email": client.username,
+                                    "parameters": None
+                                }
+                            ]
+                        },
+                    }},
                 },
                 "b",
             ],
@@ -80,4 +120,5 @@ create_res = client.make_jmap_call(
     }
 )
 
-print(json.dumps(create_res))
+import pprint
+pprint.pprint(create_res)
