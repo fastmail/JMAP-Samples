@@ -12,7 +12,7 @@ if (!process.env.JMAP_USERNAME || !process.env.JMAP_PASSWORD) {
   process.exit(1);
 }
 
-const hostname = process.env.JMAP_HOSTNAME || "betajmap.fastmail.com";
+const hostname = process.env.JMAP_HOSTNAME || "jmap.fastmail.com";
 const username = process.env.JMAP_USERNAME;
 const password = process.env.JMAP_PASSWORD;
 

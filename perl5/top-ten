@@ -8,7 +8,7 @@ use MIME::Base64;
 
 binmode *STDOUT, ':encoding(UTF-8)';
 
-my $hostname   = $ENV{JMAP_HOSTNAME} // 'betajmap.fastmail.com';
+my $hostname   = $ENV{JMAP_HOSTNAME} // 'jmap.fastmail.com';
 my $username   = $ENV{JMAP_USERNAME} // die "no JMAP_USERNAME set!\n";
 my $password   = $ENV{JMAP_PASSWORD} // die "no JMAP_PASSWORD set!\n";
 my $auth_url   = "https://$hostname/.well-known/jmap";
