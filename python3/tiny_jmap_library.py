@@ -1,5 +1,4 @@
 import json
-import os
 import requests
 
 
@@ -18,6 +17,7 @@ class TinyJMAPClient:
         self.session = None
         self.api_url = None
         self.account_id = None
+        self.identity_id = None
 
     def get_session(self):
         """Return the JMAP Session Resource as a Python dict"""
@@ -42,6 +42,31 @@ class TinyJMAPClient:
         account_id = session["primaryAccounts"]["urn:ietf:params:jmap:mail"]
         self.account_id = account_id
         return account_id
+
+    def get_identity_id(self):
+        """Return the identityId for an address matching self.username"""
+        if self.identity_id:
+            return self.identity_id
+
+        identity_res = self.make_jmap_call(
+            {
+                "using": [
+                    "urn:ietf:params:jmap:core",
+                    "urn:ietf:params:jmap:submission",
+                ],
+                "methodCalls": [
+                    ["Identity/get", {"accountId": self.get_account_id()}, "i"]
+                ],
+            }
+        )
+
+        identity_id = next(filter(
+            lambda i: i["email"] == self.username,
+            identity_res["methodResponses"][0][1]["list"],
+        ))["id"]
+
+        self.identity_id = str(identity_id)
+        return self.identity_id
 
     def make_jmap_call(self, call):
         """Make a JMAP POST request to the API, returning the reponse as a

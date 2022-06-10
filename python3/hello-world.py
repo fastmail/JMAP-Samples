@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import json
+import pprint
 import os
 from tiny_jmap_library import TinyJMAPClient
 
@@ -54,30 +54,7 @@ draft = {
     "textBody": [{"partId": "body", "type": "text/plain"}],
 }
 
-
-create_res = client.make_jmap_call(
-    {
-        "using": [
-            "urn:ietf:params:jmap:core",
-            "urn:ietf:params:jmap:mail",
-            "urn:ietf:params:jmap:submission",
-        ],
-        "methodCalls": [
-           [ "Identity/get", {
-               "accountId": account_id,
-           } , "pluckaduck"]
-        ]
-    }
-)
-
-senderIdentity = None
-
-for sndId in create_res["methodResponses"][0][1]['list']:
-    if sndId["email"] == client.username:
-        senderIdentity = sndId["id"]
-        break
-
-assert senderIdentity != None
+identity_id = client.get_identity_id()
 
 # Here, we make two calls in a single request. The first is an Email/set, to
 # set our draft in our drafts folder, and the second is an
@@ -99,7 +76,7 @@ create_res = client.make_jmap_call(
                     "onSuccessDestroyEmail": ["#sendIt"],
                     "create": { "sendIt": {
                         "emailId": "#draft",
-                        "identityId": senderIdentity,
+                        "identityId": identity_id,
                         "envelope": {
                             "mailFrom": {
                                 "email": client.username,
@@ -120,5 +97,4 @@ create_res = client.make_jmap_call(
     }
 )
 
-import pprint
 pprint.pprint(create_res)
