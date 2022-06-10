@@ -6,7 +6,7 @@ from tiny_jmap_library import TinyJMAPClient
 
 # Set up our client from the environment and set our account ID
 client = TinyJMAPClient(
-    hostname=os.environ.get("JMAP_HOSTNAME", 'jmap.fastmail.com'),
+    hostname=os.environ.get("JMAP_HOSTNAME", "jmap.fastmail.com"),
     username=os.environ.get("JMAP_USERNAME"),
     password=os.environ.get("JMAP_PASSWORD"),
 )
@@ -74,22 +74,21 @@ create_res = client.make_jmap_call(
                 {
                     "accountId": account_id,
                     "onSuccessDestroyEmail": ["#sendIt"],
-                    "create": { "sendIt": {
-                        "emailId": "#draft",
-                        "identityId": identity_id,
-                        "envelope": {
-                            "mailFrom": {
-                                "email": client.username,
-                                "parameters": None
-                            },
-                            "rcptTo": [
-                                {
+                    "create": {
+                        "sendIt": {
+                            "emailId": "#draft",
+                            "identityId": identity_id,
+                            "envelope": {
+                                "mailFrom": {
                                     "email": client.username,
-                                    "parameters": None
-                                }
-                            ]
-                        },
-                    }},
+                                    "parameters": None,
+                                },
+                                "rcptTo": [
+                                    {"email": client.username, "parameters": None}
+                                ],
+                            },
+                        }
+                    },
                 },
                 "b",
             ],

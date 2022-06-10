@@ -60,10 +60,12 @@ class TinyJMAPClient:
             }
         )
 
-        identity_id = next(filter(
-            lambda i: i["email"] == self.username,
-            identity_res["methodResponses"][0][1]["list"],
-        ))["id"]
+        identity_id = next(
+            filter(
+                lambda i: i["email"] == self.username,
+                identity_res["methodResponses"][0][1]["list"],
+            )
+        )["id"]
 
         self.identity_id = str(identity_id)
         return self.identity_id
