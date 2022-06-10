@@ -66,7 +66,7 @@ your digital life in general.
 
 Pretty cool, right?
 
--- 
+--
 This email sent from my next-generation email system at Fastmail.
 END
 
@@ -79,6 +79,33 @@ my $draft = {
   bodyValues  => { body => { value => $body, charset => 'utf-8' }  },
   textBody    => [ { partId => 'body', type => 'text/plain' } ],
 };
+
+my $ident_res = $www->post(
+  $api_url,
+  'Content-Type' => 'application/json',
+  Authorization  => "basic $auth_token",
+  Content => encode_json({
+    using => [
+      "urn:ietf:params:jmap:core",
+      "urn:ietf:params:jmap:mail",
+      "urn:ietf:params:jmap:submission",
+    ],
+    methodCalls => [
+      [ 'Identity/get', {
+          accountId => $account_id,
+          ids => undef,
+        },
+        'a',
+      ],
+    ],
+  }),
+);
+
+my $identities = $JSON->decode($ident_res->decoded_content);
+my ($identity) = grep {; $_->{email} eq $username }
+                 $identities->{methodResponses}[0][1]{list}->@*;
+
+die "could not find identity to use" unless $identity;
 
 my $res = $www->post(
   $api_url,
@@ -100,7 +127,16 @@ my $res = $www->post(
       [ 'EmailSubmission/set', {
           accountId => $account_id,
           onSuccessDestroyEmail => [ '#sendIt' ],
-          create => { sendIt => { emailId => '#draft' } }
+          create => {
+            sendIt => {
+              emailId => '#draft',
+              identityId => $identity->{id},
+              envelope => {
+                mailFrom => { email => $username },
+                rcptTo   => [{ email => $username }],
+              },
+            },
+          },
         },
         'b',
       ],
@@ -108,6 +144,6 @@ my $res = $www->post(
   }),
 );
 
-print JSON::MaybeXS->new->canonical->utf8->encode(
+print JSON::MaybeXS->new->pretty->canonical->utf8->encode(
   $JSON->decode($res->decoded_content)
 );
