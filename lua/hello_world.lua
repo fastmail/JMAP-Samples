@@ -62,6 +62,37 @@ local draft = {
 draft.keywords["$draft"] = true
 draft.mailboxIds[draft_mailbox_id] = true
 
+-- We also need to build a message envelope, which means knowing the id of the
+-- identity we are sending as. So we have to ask the server for those too.
+local ident_res = client:make_jmap_call(
+  {
+    using = {
+      "urn:ietf:params:jmap:core",
+      "urn:ietf:params:jmap:mail",
+      "urn:ietf:params:jmap:submission",
+    },
+    methodCalls = {
+      {
+        "Identity/get",
+        {
+          accountId = account_id,
+          ids = nil,
+        },
+        "a",
+      },
+    },
+  }
+)
+
+-- Pull out the id from the list response, and make sure we got it
+local identity_id
+for _,identity in ipairs(ident_res.methodResponses[1][2].list) do
+  if identity.email == client.username then
+    identity_id = identity.id
+  end
+end
+assert(identity_id)
+
 -- Here, we make two calls in a single request. The first is an Email/set, to
 -- set our draft in our drafts folder, and the second is an
 -- EmailSubmission/set, to actually send the mail to ourselves. This requires
@@ -89,7 +120,24 @@ local create_res = client:make_jmap_call(
         {
           accountId = account_id,
           onSuccessDestroyEmail = {"#sendIt"},
-          create = { sendIt = { emailId = "#draft" }},
+          create = {
+            sendIt = {
+              emailId = "#draft",
+              identityId = identity_id,
+              envelope = {
+                mailFrom = {
+                  email = client.username,
+                  parameters = nil,
+                },
+                rcptTo = {
+                  {
+                    email = client.username,
+                    parameters = nil,
+                  },
+                },
+              },
+            },
+          },
         },
         "b",
       },
