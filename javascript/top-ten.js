@@ -35,12 +35,12 @@ const inboxIdQuery = async (api_url, account_id) => {
           "Mailbox/query",
           {
             accountId: account_id,
-            filter: { role: "inbox", "hasAnyRole": true },
+            filter: { role: "inbox", hasAnyRole: true },
           },
-          "a"
+          "a",
         ],
-      ]
-    })
+      ],
+    }),
   });
 
   const data = await response.json();
@@ -68,9 +68,9 @@ const mailboxQuery = async (api_url, account_id, inbox_id) => {
             accountId: account_id,
             filter: { inMailbox: inbox_id },
             sort: [{ property: "receivedAt", isAscending: false }],
-            limit: 10
+            limit: 10,
           },
-          "a"
+          "a",
         ],
         [
           "Email/get",
@@ -80,13 +80,13 @@ const mailboxQuery = async (api_url, account_id, inbox_id) => {
             "#ids": {
               resultOf: "a",
               name: "Email/query",
-              path: "/ids/*"
-            }
+              path: "/ids/*",
+            },
           },
-          "b"
-        ]
-      ]
-    })
+          "b",
+        ],
+      ],
+    }),
   });
 
   const data = await response.json();
@@ -94,14 +94,14 @@ const mailboxQuery = async (api_url, account_id, inbox_id) => {
   return await data;
 };
 
-getSession().then(session => {
+getSession().then((session) => {
   const api_url = session.apiUrl;
   const account_id = session.primaryAccounts["urn:ietf:params:jmap:mail"];
-  inboxIdQuery(api_url, account_id).then(inbox_id => {
-    mailboxQuery(api_url, account_id, inbox_id).then(emails => {
-      emails["methodResponses"][1][1]["list"].forEach(email => {
+  inboxIdQuery(api_url, account_id).then((inbox_id) => {
+    mailboxQuery(api_url, account_id, inbox_id).then((emails) => {
+      emails["methodResponses"][1][1]["list"].forEach((email) => {
         console.log(`${email.receivedAt} — ${email.subject}`);
       });
     });
-  })
+  });
 });
