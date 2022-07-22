@@ -1,31 +1,25 @@
 #!/usr/bin/env node
-
-const fetch = require("node-fetch");
-
 // bail if we don't have our ENV set:
-if (!process.env.JMAP_USERNAME || !process.env.JMAP_PASSWORD) {
-  console.log("Please set your JMAP_USERNAME and JMAP_PASSWORD");
-  console.log(
-    "JMAP_USERNAME=username JMAP_PASSWORD=password node top-ten.js"
-  );
+if (!process.env.JMAP_USERNAME || !process.env.JMAP_TOKEN) {
+  console.log("Please set your JMAP_USERNAME and JMAP_TOKEN");
+  console.log("JMAP_USERNAME=username JMAP_TOKEN=token node hello-world.js");
 
   process.exit(1);
 }
 
-const hostname = process.env.JMAP_HOSTNAME || "jmap.fastmail.com";
+const hostname = process.env.JMAP_HOSTNAME || "api.fastmail.com";
 const username = process.env.JMAP_USERNAME;
-const password = process.env.JMAP_PASSWORD;
 
-const auth_url = `https://${hostname}/.well-known/jmap`;
-const auth_token = Buffer.from(`${username}:${password}`).toString("base64");
+const authUrl = `https://${hostname}/.well-known/jmap`;
+const headers = {
+  "Content-Type": "application/json",
+  Authorization: `Bearer ${process.env.JMAP_TOKEN}`,
+};
 
 const getSession = async () => {
-  const response = await fetch(auth_url, {
+  const response = await fetch(authUrl, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `basic ${auth_token}`
-    }
+    headers,
   });
   return response.json();
 };
@@ -33,10 +27,7 @@ const getSession = async () => {
 const inboxIdQuery = async (api_url, account_id) => {
   const response = await fetch(api_url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `basic ${auth_token}`
-    },
+    headers,
     body: JSON.stringify({
       using: ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
       methodCalls: [
@@ -67,10 +58,7 @@ const inboxIdQuery = async (api_url, account_id) => {
 const mailboxQuery = async (api_url, account_id, inbox_id) => {
   const response = await fetch(api_url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `basic ${auth_token}`
-    },
+    headers,
     body: JSON.stringify({
       using: ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
       methodCalls: [

@@ -1,31 +1,28 @@
 #!/usr/bin/env node
-
-const fetch = require("node-fetch");
-
 // bail if we don't have our ENV set:
-if (!process.env.JMAP_USERNAME || !process.env.JMAP_PASSWORD) {
-  console.log("Please set your JMAP_USERNAME and JMAP_PASSWORD");
+if (!process.env.JMAP_USERNAME || !process.env.JMAP_TOKEN) {
+  console.log("Please set your JMAP_USERNAME and JMAP_TOKEN");
   console.log(
-    "JMAP_USERNAME=username JMAP_PASSWORD=password node hello-world.js"
+    "JMAP_USERNAME=username JMAP_TOKEN=token node hello-world.js"
   );
 
   process.exit(1);
 }
 
-const hostname = process.env.JMAP_HOSTNAME || "jmap.fastmail.com";
+const hostname = process.env.JMAP_HOSTNAME || "api.fastmail.com";
 const username = process.env.JMAP_USERNAME;
-const password = process.env.JMAP_PASSWORD;
 
 const auth_url = `https://${hostname}/.well-known/jmap`;
-const auth_token = Buffer.from(`${username}:${password}`).toString("base64");
+const Authorization = `Bearer ${process.env.JMAP_TOKEN}`;
+const headers = {
+  "Content-Type": "application/json",
+  Authorization,
+};
 
 const getSession = async () => {
   const response = await fetch(auth_url, {
     method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `basic ${auth_token}`
-    }
+    headers,
   });
   return response.json();
 };
@@ -33,10 +30,7 @@ const getSession = async () => {
 const mailboxQuery = async (api_url, account_id) => {
   const response = await fetch(api_url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `basic ${auth_token}`
-    },
+    headers,
     body: JSON.stringify({
       using: ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail"],
       methodCalls: [
@@ -53,10 +47,36 @@ const mailboxQuery = async (api_url, account_id) => {
   return await data["methodResponses"][0][1]["ids"][0];
 };
 
-const draftResponse = async (api_url, account_id, draft_id) => {
+const identityQuery = async (api_url, account_id) => {
+  const response = await fetch(api_url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      using: [
+        "urn:ietf:params:jmap:core",
+        "urn:ietf:params:jmap:mail",
+        "urn:ietf:params:jmap:submission",
+      ],
+      methodCalls: [
+        [
+          "Identity/get",
+          { accountId: account_id, ids: null },
+          "a"
+        ]
+      ]
+    })
+  });
+  const data = await response.json();
+
+  return await data["methodResponses"][0][1]
+    .list
+    .filter(identity => identity.email === username)[0].id;
+};
+
+const draftResponse = async (api_url, account_id, draft_id, identity_id) => {
   const message_body =
     "Hi! \n\n" +
-    "This email may not look like much, but I sent it with JMAP, a new protocol \n" +
+    "This email may not look like much, but I sent it with JMAP, a protocol \n" +
     "designed to make it easier to manage email, contacts, calendars, and more of \n" +
     "your digital life in general. \n\n" +
     "Pretty cool, right? \n\n" +
@@ -75,10 +95,7 @@ const draftResponse = async (api_url, account_id, draft_id) => {
 
   const response = await fetch(api_url, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `basic ${auth_token}`
-    },
+    headers,
     body: JSON.stringify({
       using: [
         "urn:ietf:params:jmap:core",
@@ -96,7 +113,7 @@ const draftResponse = async (api_url, account_id, draft_id) => {
           {
             accountId: account_id,
             onSuccessDestroyEmail: ["#sendIt"],
-            create: { sendIt: { emailId: "#draft" } }
+            create: { sendIt: { emailId: "#draft", identityId: identity_id } },
           },
           "b"
         ]
@@ -105,13 +122,16 @@ const draftResponse = async (api_url, account_id, draft_id) => {
   });
   const data = await response.json();
 
-  console.log(JSON.stringify(data));
+  console.log(JSON.stringify(data, null, 2));
 };
 
-getSession().then(session => {
+const run = async () => {
+  const session = await getSession();
   const api_url = session.apiUrl;
   const account_id = session.primaryAccounts["urn:ietf:params:jmap:mail"];
-  mailboxQuery(api_url, account_id).then(draft_id => {
-    draftResponse(api_url, account_id, draft_id);
-  });
-});
+  const draft_id = await mailboxQuery(api_url, account_id);
+  const identity_id = await identityQuery(api_url, account_id);
+  draftResponse(api_url, account_id, draft_id, identity_id);
+};
+
+run();
