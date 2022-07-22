@@ -4,9 +4,9 @@ local tiny_jmap = require("tiny_jmap")
 
 -- Set up our client from the environment and set our account ID
 local client = tiny_jmap.new({
-  hostname = os.getenv("JMAP_HOSTNAME") or "jmap.fastmail.com",
+  hostname = os.getenv("JMAP_HOSTNAME") or "api.fastmail.com",
   username = os.getenv("JMAP_USERNAME"),
-  password = os.getenv("JMAP_PASSWORD"),
+  token = os.getenv("JMAP_TOKEN"),
 })
 local account_id = client:get_account_id()
 
@@ -40,7 +40,7 @@ assert(draft_mailbox_id)
 local body = [[
 Hi!
 
-This email may not look like much, but I sent it with JMAP, a new protocol
+This email may not look like much, but I sent it with JMAP, a protocol
 designed to make it easier to manage email, contacts, calendars, and more of
 your digital life in general.
 

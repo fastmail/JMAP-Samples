@@ -8,12 +8,10 @@ use MIME::Base64;
 
 binmode *STDOUT, ':encoding(UTF-8)';
 
-my $hostname   = $ENV{JMAP_HOSTNAME} // 'jmap.fastmail.com';
+my $hostname   = $ENV{JMAP_HOSTNAME} // 'api.fastmail.com';
 my $username   = $ENV{JMAP_USERNAME} // die "no JMAP_USERNAME set!\n";
-my $password   = $ENV{JMAP_PASSWORD} // die "no JMAP_PASSWORD set!\n";
+my $token      = $ENV{JMAP_TOKEN}    // die "no JMAP_TOKEN set!\n";
 my $auth_url   = "https://$hostname/.well-known/jmap";
-
-my $auth_token = encode_base64("$username:$password", "");
 
 my $www = LWP::UserAgent->new;
 my $JSON = JSON::MaybeXS->new->utf8;
@@ -21,7 +19,7 @@ my $JSON = JSON::MaybeXS->new->utf8;
 sub get_session {
   my $res = $www->get(
     $auth_url,
-    Authorization  => "basic $auth_token",
+    Authorization  => "Bearer $token",
   );
 
   return $JSON->decode($res->decoded_content);
@@ -38,7 +36,7 @@ sub do_request {
   my $res = $www->post(
     $api_url,
     'Content-Type' => 'application/json',
-    Authorization  => "basic $auth_token",
+    Authorization  => "Bearer $token",
     Content => encode_json({
       using => [ "urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail" ],
       methodCalls => \@method_calls,

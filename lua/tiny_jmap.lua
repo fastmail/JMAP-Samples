@@ -1,5 +1,4 @@
 local request = require("http.request")
-local basexx = require("basexx")
 local cjson = require("cjson")
 
 local tiny_jmap = {}
@@ -8,7 +7,7 @@ function tiny_jmap.new (args)
   local self = {}
   self.hostname = args.hostname
   self.username = args.username
-  self.authorization = "Basic "..basexx.to_base64(args.username..":"..args.password)
+  self.authorization = "Bearer "..args.token
   setmetatable(self, {__index = tiny_jmap})
   return self
 end
