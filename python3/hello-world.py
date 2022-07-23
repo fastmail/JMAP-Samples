@@ -78,15 +78,6 @@ create_res = client.make_jmap_call(
                         "sendIt": {
                             "emailId": "#draft",
                             "identityId": identity_id,
-                            "envelope": {
-                                "mailFrom": {
-                                    "email": client.username,
-                                    "parameters": None,
-                                },
-                                "rcptTo": [
-                                    {"email": client.username, "parameters": None}
-                                ],
-                            },
                         }
                     },
                 },

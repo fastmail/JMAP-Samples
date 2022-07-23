@@ -131,10 +131,6 @@ my $res = $www->post(
             sendIt => {
               emailId => '#draft',
               identityId => $identity->{id},
-              envelope => {
-                mailFrom => { email => $username },
-                rcptTo   => [{ email => $username }],
-              },
             },
           },
         },
