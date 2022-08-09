@@ -3,9 +3,9 @@
 local tiny_jmap = require("tiny_jmap")
 
 local client = tiny_jmap.new({
-  hostname = os.getenv("JMAP_HOSTNAME") or "jmap.fastmail.com",
+  hostname = os.getenv("JMAP_HOSTNAME") or "api.fastmail.com",
   username = os.getenv("JMAP_USERNAME"),
-  password = os.getenv("JMAP_PASSWORD"),
+  token = os.getenv("JMAP_TOKEN"),
 })
 
 local account_id = client:get_account_id()

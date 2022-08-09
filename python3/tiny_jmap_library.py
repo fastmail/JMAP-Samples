@@ -5,15 +5,15 @@ import requests
 class TinyJMAPClient:
     """The tiniest JMAP client you can imagine."""
 
-    def __init__(self, hostname, username, password):
-        """Initialize using a hostname, username and password"""
+    def __init__(self, hostname, username, token):
+        """Initialize using a hostname, username and bearer token"""
         assert len(hostname) > 0
         assert len(username) > 0
-        assert len(password) > 0
+        assert len(token) > 0
 
         self.hostname = hostname
         self.username = username
-        self.password = password
+        self.token = token
         self.session = None
         self.api_url = None
         self.account_id = None
@@ -25,7 +25,10 @@ class TinyJMAPClient:
             return self.session
         r = requests.get(
             "https://" + self.hostname + "/.well-known/jmap",
-            auth=(self.username, self.password),
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.token}",
+            },
         )
         r.raise_for_status()
         self.session = session = r.json()
@@ -75,8 +78,10 @@ class TinyJMAPClient:
         Python data structure."""
         res = requests.post(
             self.api_url,
-            auth=(self.username, self.password),
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.token}",
+            },
             data=json.dumps(call),
         )
         res.raise_for_status()
