@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "JMAP samples in javascript",
   "main": "hello-world.js",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
