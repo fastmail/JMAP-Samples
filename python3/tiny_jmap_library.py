@@ -74,7 +74,7 @@ class TinyJMAPClient:
         return self.identity_id
 
     def make_jmap_call(self, call):
-        """Make a JMAP POST request to the API, returning the reponse as a
+        """Make a JMAP POST request to the API, returning the response as a
         Python data structure."""
         res = requests.post(
             self.api_url,
