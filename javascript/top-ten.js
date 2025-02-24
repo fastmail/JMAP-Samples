@@ -45,7 +45,7 @@ const inboxIdQuery = async (api_url, account_id) => {
 
   const data = await response.json();
 
-  inbox_id = data["methodResponses"][0][1]["ids"][0];
+  const inbox_id = data["methodResponses"][0][1]["ids"][0];
 
   if (!inbox_id.length) {
     console.error("Could not get an inbox.");
